@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Code Display</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.63.3/codemirror.min.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.63.3/theme/dracula.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css"> <!-- Link to the external CSS -->
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <h1>Python Code Examples</h1>
+        <div class="header-right">
+            <button class="toggle-nav-btn" onclick="toggleNav()">Show Navigation</button>
+        </div>
+    </header>
+
+    <!-- Content Wrapper -->
+    <div class="content-wrapper">
+        <!-- Side Navigation -->
+        <nav id="side-nav" class="hidden">
+            <h2>Sections</h2>
+            <ul>
+                <li><a href="#section-1">Brilho_Contraste_Gama</a></li>
+                <li><a href="#section-2">Blur_com_integral_da_imgem</a></li>
+                <li><a href="#section-3">Blur_Gaussiano</a></li>
+            </ul>
+        </nav>
+
+        <!-- Main Content -->
+        <div class="main-content" id="main-content">
+            <!-- Code Section 1 -->
+            <section id="section-1">
+                <h2>Brilho_Contraste_Gama</h2>
+                <button class="copy-btn" onclick="copySection(this)">Copy Code</button>
+                <textarea id="python-code-1" class="code-area">
+import matplotlib.pyplot as plt
+import numpy as np
+
+# Brilho
+imagem = plt.imread("car.jpg")
+imagem = imagem.astype(np.float32)
+brilho = 30
+imagem_brilho = imagem + brilho
+imagem_brilho = np.clip(imagem_brilho, 0, 255)
+imagem_brilho = imagem_brilho.astype(np.uint8)
+
+#Contraste
+imagem = plt.imread("car.jpg")
+imagem = imagem.astype(np.float32)
+alpha = 1.5
+imagem_contraste = imagem * alpha
+imagem_contraste = np.clip(imagem_contraste, 0, 255)
+imagem_contraste = imagem_contraste.astype(np.uint8)
+                    
+#Gama
+imagem = plt.imread("car.jpg") #Load the image
+imagem = imagem.astype(np.float32) / 255.0  #Normalize to range [0, 1]
+gamma = 2.2
+imagem_gama = np.power(imagem, gamma) #Apply gamma correction
+imagem = (imagem * 255).astype(np.uint8) #Scale back to [0, 255] and convert to uint8
+imagem_gama = (imagem_gama * 255).clip(0, 255).astype(np.uint8)
+                </textarea>
+            </section>
+
+            <!-- Code Section 2 -->
+            <section id="section-2">
+                <h2>Blur_com_integral_da_imgem</h2>
+                <button class="copy-btn" onclick="copySection(this)">Copy Code</button>
+                <textarea id="python-code-2" class="code-area">
+import matplotlib.pyplot as plt
+import numpy as np
+
+def integral_image(imagem_gray):
+    integral_img = np.zeros_like(imagem_gray)
+
+    # Primeiro pixel
+    integral_img[0, 0] = imagem_gray[0, 0]
+
+    # Primeira linha
+    for j in range(1, imagem_gray.shape[1]):
+        integral_img[0, j] = integral_img[0, j-1] + imagem_gray[0, j]
+
+    # Primeira coluna
+    for i in range(1, imagem_gray.shape[0]):
+        integral_img[i, 0] = integral_img[i-1, 0] + imagem_gray[i, 0]
+
+    # Restantes pixeis 
+    for i in range(1, imagem_gray.shape[0]):
+        for j in range(1, imagem_gray.shape[1]):
+            integral_img[i, j] = imagem_gray[i, j] + integral_img[i-1, j] + integral_img[i, j-1] - integral_img[i-1, j-1]
+
+    return integral_img
+
+def soma_regiao_integral(integral_img, x1, y1, x2, y2):
+    total = integral_img[y2, x2]
+
+    if x1 > 0:
+        total -= integral_img[y2, x1 - 1]
+    if y1 > 0:
+        total -= integral_img[y1 - 1, x2]
+    if x1 > 0 and y1 > 0:
+        total += integral_img[y1 - 1, x1 - 1]
+
+    return total
+
+def blur(imagem_gray, integral_img, window_size):
+    blurred_image = np.zeros_like(imagem_gray)
+    half_window = window_size // 2
+
+    for i in range(imagem_gray.shape[0]):
+        for j in range(imagem_gray.shape[1]):
+            x1 = j - half_window
+            if x1 < 0: x1 = 0
+            
+            y1 = i - half_window
+            if y1 < 0: y1 = 0
+            
+            x2 = j + half_window
+            if x2 >= imagem_gray.shape[0]: x2 = imagem_gray.shape[0] - 1
+            
+            y2 = i + half_window
+            if y2 >= imagem_gray.shape[1]: y2 = imagem_gray.shape[1] - 1
+            
+            blurred_image[i, j] = soma_regiao_integral(integral_img, x1, y1, x2, y2) / ((x2 - x1 + 1) * (y2 - y1 + 1))
+
+    return blurred_image
+
+imagem = plt.imread("barco.jpg")
+height, width  , channel = imagem.shape 
+imagem_gray= np.mean(imagem,axis=2) #Torna imagem em gray scale 
+integral_img  = integral_image(imagem_gray)
+blurred_img = blur(imagem_gray, integral_img ,30)
+                </textarea>
+            </section>
+
+            <section id="section-3">
+                <h2>Blur_Gaussiano_E_Sharpe_Image</h2>
+                <button class="copy-btn" onclick="copySection(this)">Copy Code</button>
+                <textarea id="python-code-3" class="code-area">
+import matplotlib.pyplot as plt
+import numpy as np
+def gaussian(imagem_gray):
+    gaussian_matrix = np.array([[1, 4, 6, 4, 1],
+                                [4, 16, 24, 16, 4],
+                                [6, 24, 36, 26, 6],
+                                [4, 16, 24, 16, 4],
+                                [1, 4, 6, 4, 1]])
+
+    filtered_img = np.zeros_like(imagem_gray)
+    window_height, window_width = gaussian_matrix.shape
+
+    padded_image = np.pad(imagem_gray, 
+                            ((window_height // 2, window_height // 2), 
+                            (window_width // 2, window_width // 2)),
+                            mode='constant', constant_values=0)
+    total = np.sum(gaussian_matrix)
+    for i in range(imagem_gray.shape[0]):
+        for j in range(imagem_gray.shape[1]):
+            window = padded_image[i:i+window_height, j:j+window_width]
+            filtered_img[i, j] = np.sum(window * gaussian_matrix) / total
+    
+    return filtered_img
+
+def sharpen(imagem_gray):
+    # Define the sharpening filter (kernel)
+    sharpening_kernel = np.array([[0, -1,  0],
+                                    [-1,  5, -1],
+                                    [0, -1,  0]])
+
+    filtered_img = np.zeros_like(imagem_gray)
+    window_height, window_width = sharpening_kernel.shape
+
+    padded_image = np.pad(imagem_gray, 
+                            ((window_height // 2, window_height // 2), 
+                            (window_width // 2, window_width // 2)),
+                            mode='constant', constant_values=0)
+
+    for i in range(imagem_gray.shape[0]):
+        for j in range(imagem_gray.shape[1]):
+            window = padded_image[i:i+window_height, j:j+window_width]
+            
+            filtered_img[i, j] = np.sum(window * sharpening_kernel)
+    
+    return filtered_img
+
+def equation_sharpe(imagem_gray , blurred_img ):
+    alpha = 0.5
+    return (imagem_gray + alpha*(imagem_gray-blurred_img))
+
+imagem = plt.imread("PCB.jpg")
+imagem_gray= np.mean(imagem,axis=2) #Torna imagem em gray scale 
+blurred_img = gaussian(imagem_gray)
+
+#sharpened_img = sharpen(blurred_img)
+sharpened_img = equation_sharpe(imagem_gray , blurred_img )
+                </textarea>
+            </section>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.63.3/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.63.3/mode/python/python.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
