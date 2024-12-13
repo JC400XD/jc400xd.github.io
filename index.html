@@ -32,7 +32,7 @@
                 <li><a href="#section-7">Segmentação_da_Img_por_Cor</a></li>
                 <li><a href="#section-9">Orientacao_do_Objeto</a></li>
                 <li><a href="#section-10">Aruco</a></li>
-                <li><a href="#section-11">Transformar_prespectiva</a></li>
+                <li><a href="#section-11">Transformar_prespectiva_Para_Ler_Aruco</a></li>
             </ul>
         </nav>
 
@@ -899,10 +899,88 @@ plt.show()
             </section> 
 
             <section id="section-11">
-                <h2>Transformar_prespectiva</h2>
+                <h2>Transformar_prespectiva_Para_Ler_Aruco</h2>
                 <button class="copy-btn" onclick="copySection(this)">Copy Code</button>
                 <textarea id="python-code-11" class="code-area">
+import matplotlib.pyplot as plt
+import numpy as np
+import scipy.ndimage as sc
+import cv2
 
+
+
+def extrair_palavra_binaria(marker_img, grid_size=(8, 8) , inner_size=(6, 6) ):
+
+    if max(marker_img[0]) > 1:  # Normalizar img  
+        marker_img = marker_img / 255
+        
+    rows, cols = marker_img.shape
+    cell_height = rows // grid_size[0]
+    cell_width = cols // grid_size[1]
+    
+    # Define as bordas da área 4x4 dentro da 6x6
+    start_row = (grid_size[0] - inner_size[0]) // 2
+    start_col = (grid_size[1] - inner_size[1]) // 2
+    
+    word = ""
+    for i in range(start_row, start_row + inner_size[0]):
+        for j in range(start_col, start_col + inner_size[1]):
+            # Extrai uma célula da grade
+            cell = marker_img[i*cell_height:(i+1)*cell_height, j*cell_width:(j+1)*cell_width]
+            cell_mean = np.mean(cell)
+            if cell_mean > 0.6:
+                word += "1" 
+            else: 
+                word += "0"  
+                
+            """
+            In ArUco Original Image
+            A white cell corresponds to a binary 1.
+            A black cell corresponds to a binary 0.
+            """
+    
+    return word
+
+
+
+img = plt.imread("persp01.png")
+img_gray = np.mean(img, axis=2)
+img_gray = img_gray < 0.5
+img_gray = (img_gray * 255).astype(np.uint8)
+countorns,_ = cv2.findContours(img_gray,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
+dst_points = np.array([[0, 0], [0, 200], [200, 200], [200,0]], dtype="float32") # Trocar Pontos se img tiver invertida 
+output_size = (200, 200)
+
+fig, ax = plt.subplots()
+plt.title("Imagem com Posições Marcadas")
+ax.imshow(img)
+
+# Adicionar círculos para as regiões detectadas
+i = 1
+for cont in countorns:
+    # Aproximar o contorno para simplificar a forma
+    epsilon = 0.05 * cv2.arcLength(cont, True)
+    approx = cv2.approxPolyDP(cont, epsilon, True)
+    
+    # Adicionar círculos nas posições dos pontos aproximados
+    for point in approx:
+        x, y = point[0]  # Extrair x e y do ponto
+        circle = plt.Circle((x, y), radius=5, color='red', fill=True)
+        ax.add_artist(circle)
+    
+    src_points = np.array([p[0] for p in approx], dtype="float32")
+    matriz_formacao = cv2.getPerspectiveTransform(src_points, dst_points)
+    transformed_img_gray = cv2.warpPerspective(img_gray, matriz_formacao, output_size)
+    
+    plt.figure(figsize=(8, 8))
+    plt.imshow(transformed_img_gray, cmap='gray')
+    plt.title("Imagem Transformada " + str(i))
+    i = i + 1
+
+    word = extrair_palavra_binaria(transformed_img_gray)
+    print(word)
+plt.show()
+                   
                 </textarea>
             </section>
         </div>
