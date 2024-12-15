@@ -420,40 +420,6 @@ plt.show()
 import matplotlib.pyplot as plt
 import numpy as np
 
-
-def integral_image(imagem_gray):
-    integral_img = np.zeros_like(imagem_gray)
-
-    # Primeiro pixel
-    integral_img[0, 0] = imagem_gray[0, 0]
-
-    # Primeira linha
-    for j in range(1, imagem_gray.shape[1]):
-        integral_img[0, j] = integral_img[0, j-1] + imagem_gray[0, j]
-
-    # Primeira coluna
-    for i in range(1, imagem_gray.shape[0]):
-        integral_img[i, 0] = integral_img[i-1, 0] + imagem_gray[i, 0]
-
-    # Restantes pixeis 
-    for i in range(1, imagem_gray.shape[0]):
-        for j in range(1, imagem_gray.shape[1]):
-            integral_img[i, j] = imagem_gray[i, j] + integral_img[i-1, j] + integral_img[i, j-1] - integral_img[i-1, j-1]
-            
-    return integral_img
-
-def soma_regiao_integral(integral_img, x1, y1, x2, y2):
-    total = integral_img[y2, x2]
-
-    if x1 > 0:
-        total -= integral_img[y2, x1 - 1]
-    if y1 > 0:
-        total -= integral_img[y1 - 1, x2]
-    if x1 > 0 and y1 > 0:
-        total += integral_img[y1 - 1, x1 - 1]
-
-    return total
-
 def sharpening_filter(imagem_gray):
     kernel = np.array([[0, -1, 0],
                         [-1, 5, -1],
@@ -1102,7 +1068,7 @@ plt.show()
                 <h2>Xadrez</h2>
                 <button class="copy-btn" onclick="copySection(this)">Copy Code</button>
                 <textarea id="python-code-13" class="code-area">
-            import cv2
+import cv2
 import glob
 import numpy as np
 import matplotlib.pyplot as plt
@@ -1472,6 +1438,82 @@ centroides_reais = por_centroids_na_img_original(num_images,images,filtered_cent
 calibarar_camera(num_images,images,centroides_reais)
             </textarea>
         </section>
+
+        <section id="section-14">
+            <h2>LOG_OR_DOG_Edge_Detection</h2>
+            <button class="copy-btn" onclick="copySection(this)">Copy Code</button>
+            <textarea id="python-code-14" class="code-area">
+import cv2
+import numpy as np
+import matplotlib.pyplot as plt
+
+def difference_of_gaussians(image, sigma1=1.0, sigma2=2.0):
+    
+    if image is None:
+        raise ValueError("Image not found or invalid file path.")
+    
+    # Apply Gaussian blurring with different sigma values
+    blurred1 = cv2.GaussianBlur(image, (0, 0), sigma1)
+    blurred2 = cv2.GaussianBlur(image, (0, 0), sigma2)
+    
+    # Compute the Difference of Gaussians
+    dog_image = cv2.subtract(blurred1, blurred2)
+    
+    # Normalize to display properly (DOG result can have negative values)
+    dog_image = np.uint8(np.absolute(dog_image))
+    
+    return dog_image
+
+
+def laplacian_of_gaussian_edge_detection(image, sigma=1.0):
+    
+    if image is None:
+        raise ValueError("Image not found or invalid file path.")
+    
+    # Apply Gaussian blur to smooth the image
+    blurred = cv2.GaussianBlur(image, (0, 0), sigma)
+    
+    # Apply the Laplacian filter to the blurred image
+    log_edges = cv2.Laplacian(blurred, cv2.CV_64F, ksize=3)
+    
+    # Convert to absolute values (edges can have negative gradients)
+    log_edges = np.uint8(np.absolute(log_edges))
+    
+    return log_edges
+
+
+# File path to the input image
+image_path = "can.jpg"
+image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
+
+# Perform LOG edge detection
+sigma = 2.0  # Adjust the sigma for the Gaussian blur
+log_edge_image = laplacian_of_gaussian_edge_detection(image, sigma=sigma)
+
+sigma1 = 1.0  # First Gaussian kernel
+sigma2 = 2.0 # Second Gaussian kernel
+dog_edge_image = difference_of_gaussians(image, sigma1=sigma1, sigma2=sigma2)
+
+# Display the results
+plt.figure()
+plt.title("Original Image")
+plt.imshow(image, cmap="gray")
+plt.axis("off")
+
+plt.figure()
+plt.title("LOG Edge Detection")
+plt.imshow(log_edge_image, cmap="gray")
+plt.axis("off")
+
+plt.figure()
+plt.title("DOG Edge Detection")
+plt.imshow(dog_edge_image, cmap="gray")
+plt.axis("off")
+
+plt.show()
+                
+            </textarea>
+        </section>  
         </div>
     </div>
 
