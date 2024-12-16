@@ -36,6 +36,10 @@
                 <li><a href="#section-11">Transformar_prespectiva_Para_Ler_Aruco</a></li>
                 <li><a href="#section-12">Convolução_da_Img_Com_Qualquer_Kernel</a></li>
                 <li><a href="#section-13">Xadrez</a></li>
+                <li><a href="#section-14">LOG_OR_DOG_Edge_Detection</a></li>
+                <li><a href="#section-15">Ex4</a></li>
+                <li><a href="#section-16">Ex5</a></li>
+                <li><a href="#section-17">Ex6</a></li>
             </ul>
         </nav>
 
@@ -1542,7 +1546,226 @@ plt.show()
                 
             </textarea>
         </section>  
+
+        <section id="section-15">
+            <h2>Ex4</h2>
+            <button class="copy-btn" onclick="copySection(this)">Copy Code</button>
+            <textarea id="python-code-15" class="code-area">
+import matplotlib.pyplot as plt
+import numpy as np
+import cv2
+import scipy.ndimage as sc
+
+def get_centroid(imagem):
+    M00 = M10 = M01 = 0
+    for i in range(imagem.shape[0]):
+        for j in range(imagem.shape[1]):
+            M00 += imagem[i, j]
+            M10 += imagem[i, j] * i
+            M01 += imagem[i, j] * j
+    
+    centroid_i = M10 / M00
+    centroid_j = M01 / M00
+    return centroid_i, centroid_j
+
+def calcular_orientacao(img):
+    centroid_i, centroid_j = get_centroid(img)
+    
+    mu11 = mu02 = mu20 = 0
+    for i in range(img.shape[0]):
+        for j in range(img.shape[1]):
+            mu11 += (i - centroid_i) * (j - centroid_j) * img[i, j]
+            mu02 += (j - centroid_j) * (j - centroid_j) * img[i, j]
+            mu20 += (i - centroid_i) * (i - centroid_i) * img[i, j]
+    
+    # Calcular a orientação (em radianos)
+    theta = 0.5 * np.arctan2(2 * mu11, (mu20 - mu02))
+    
+    # Calcular Excentricidade
+    cov_matrix = np.array([[mu20, mu11], [mu11, mu02]])
+    eigenvalues, _ = np.linalg.eig(cov_matrix)
+    lambda_max, lambda_min = np.sort(eigenvalues)[::-1]
+    excentricidade = np.sqrt(1 - (lambda_min / lambda_max))
+    
+    return centroid_i, centroid_j, np.degrees(theta), excentricidade
+
+img = plt.imread("porcas_parafuso.png")
+
+img_gray= np.mean(img,axis=2)
+img_gray = img_gray < 0.6
+img_gray = (img_gray * 255).astype(np.uint8)
+img_dil = sc.binary_dilation(img_gray, structure=np.ones([6, 6]))
+img_erode = sc.binary_erosion(img_dil, structure=np.ones([10, 10]))
+
+labeled_img, num_features = sc.label(img_erode)
+new_img = np.zeros_like(img_erode)
+
+for i in range(1, num_features + 1):
+    figure = labeled_img == i
+    centroid_i, centroid_j, theata, excentricidade = calcular_orientacao(figure)
+    if excentricidade > 0.5:
+        new_img += figure        
         
+plt.figure()
+plt.imshow(labeled_img)
+        
+plt.figure()
+plt.imshow(new_img)
+plt.show()
+            </textarea>
+        </section>  
+
+        <section id="section-16">
+            <h2>Ex5</h2>
+            <button class="copy-btn" onclick="copySection(this)">Copy Code</button>
+            <textarea id="python-code-16" class="code-area">
+import matplotlib.pyplot as plt
+import numpy as np
+import cv2
+import scipy.ndimage as sc
+
+def extrair_palavra_binaria(marker_img, grid_size=(8, 8) , inner_size=(6, 6) ):
+    """
+    Extrai uma representação binária de um marcador ARUCO a partir de uma subimagem.
+
+    Parâmetros:
+    marker_img (ndarray): A subimagem do marcador.
+    grid_size (tuple): Tamanho da grade externa (6x6 por padrão).
+    inner_size (tuple): Tamanho da grade interna (4x4 por padrão).
+
+    Retorna:
+    str: Uma string binária representando a área interna 4x4 do marcador.
+    """
+    rows, cols = marker_img.shape
+    cell_height = rows // grid_size[0]
+    cell_width = cols // grid_size[1]
+    
+    # Define as bordas da área 4x4 dentro da 6x6
+    start_row = (grid_size[0] - inner_size[0]) // 2
+    start_col = (grid_size[1] - inner_size[1]) // 2
+    
+    word = ""
+    for i in range(start_row, start_row + inner_size[0]):
+        for j in range(start_col, start_col + inner_size[1]):
+            # Extrai uma célula da grade
+            cell = marker_img[i*cell_height:(i+1)*cell_height, j*cell_width:(j+1)*cell_width]
+            cell_mean = np.mean(cell)
+            if cell_mean < 0.6:
+                word += "1" 
+            else: 
+                word += "0"  
+    
+    return word
+
+
+img = plt.imread("aruco.png")
+img_gray= np.mean(img,axis=2)
+img_gray = img_gray < 0.5
+print(extrair_palavra_binaria(img_gray))
+
+plt.figure()
+plt.imshow(img_gray)
+plt.show()
+            </textarea>
+        </section>  
+
+        <section id="section-17">
+            <h2>Ex6</h2>
+            <button class="copy-btn" onclick="copySection(this)">Copy Code</button>
+            <textarea id="python-code-17" class="code-area">
+import scipy.ndimage as sc
+import numpy as np
+import cv2
+import matplotlib.pyplot as plt
+
+# Load and preprocess the image
+imagem_original = plt.imread('image.png')
+imagem_original = (imagem_original * 255).astype(np.uint8)
+
+# Convert to HSV and apply threshold
+hsv_img = cv2.cvtColor(imagem_original, cv2.COLOR_RGB2HSV)
+lower_color = np.array([16, 80, 150])   # Example HSV lower bound
+upper_color = np.array([21, 255, 255])  # Example HSV upper bound
+imagem_bin = cv2.inRange(hsv_img, lower_color, upper_color)
+
+# Perform dilation and erosion
+img_dil = sc.binary_dilation(imagem_bin, structure=np.ones([6, 6]))
+img_erode = sc.binary_erosion(img_dil, structure=np.ones([10, 10]))
+
+# Find contours and hierarchy
+contours, hierarchy = cv2.findContours(
+    (img_erode).astype(np.uint8), 
+    cv2.RETR_TREE, 
+    cv2.CHAIN_APPROX_SIMPLE
+)
+
+# Plot the eroded image
+fig, ax = plt.subplots()
+plt.title("Imagem HSV with Internal Points")
+ax.imshow(img_erode, cmap='gray')
+
+paint_points = []
+# Loop through contours and hierarchy
+for i, cont in enumerate(contours):
+    # Check if the contour is internal
+    if hierarchy[0][i][3] != -1:  # Internal contour
+        # Fit a bounding rectangle
+        x, y, w, h = cv2.boundingRect(cont)
+        #w is the width of the bounding rectangle.
+        #h is the height of the bounding rectangle.
+        aspect_ratio = w / h
+
+        # Check for rectangularity conditions
+        if 0.9 <= aspect_ratio < 1 :  # Adjust thresholds as needed
+            # Approximate the contour
+            epsilon = 0.05 * cv2.arcLength(cont, True)
+            approx = cv2.approxPolyDP(cont, epsilon, True)
+
+            # Draw circles on the rectangular contour
+            for point in approx:
+                x, y = point[0]
+                circle = plt.Circle((x, y), radius=10, color='red', fill=True)
+                ax.add_artist(circle)
+                
+            paint_points = approx
+            break
+
+
+"""
+Se soubermos os pontos que queremos fzr o warp
+
+# Definir os pontos da imagem original (manualmente)
+pontos_original = np.float32([[722, 409], [874, 828], [1154, 760], [1000, 357]])
+
+# Calcular a largura e altura com base nos pontos
+largura = int(np.linalg.norm(pontos_original[2] - pontos_original[3]))  # Distância entre ponto 3 e 4
+altura = int(np.linalg.norm(pontos_original[1] - pontos_original[0]))   # Distância entre ponto 2 e 1
+
+# Ajustar os pontos de destino mantendo as proporções
+pontos_destino = np.float32([[0, 0], [0, altura], [largura, altura], [largura, 0]])
+
+# Obter a matriz de transformação perspectiva
+M = cv2.getPerspectiveTransform(pontos_original, pontos_destino)
+
+# Aplicar a transformação perspectiva
+out = cv2.warpPerspective(imagem_original, M, (largura, altura), flags=cv2.INTER_LINEAR)
+"""
+
+dst_points = np.array([[0, 0], [0, w], [h, w], [h, 0]], dtype="float32")  # Adjust this as needed
+output_size = (h, w)
+
+src_points = np.array([p[0] for p in approx], dtype="float32")
+matriz_formacao = cv2.getPerspectiveTransform(src_points, dst_points)
+out = cv2.warpPerspective(imagem_original, matriz_formacao, output_size)
+
+print(output_size)
+plt.figure()
+plt.imshow(out)
+plt.title("Imagem Cortada")
+plt.show()
+                                
+            </textarea>
+        </section>  
         </div>
     </div>
 
