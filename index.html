@@ -888,14 +888,21 @@ plt.show()
                 <textarea id="python-code-11" class="code-area">
 import matplotlib.pyplot as plt
 import numpy as np
-import scipy.ndimage as sc
 import cv2
 
-
-
 def extrair_palavra_binaria(marker_img, grid_size=(8, 8) , inner_size=(6, 6) ):
+    """
+    Extrai uma representação binária de um marcador ARUCO a partir de uma subimagem.
 
-    if max(marker_img[0]) > 1:  # Normalizar img  
+    Parâmetros:
+    marker_img (ndarray): A subimagem do marcador.
+    grid_size (tuple): Tamanho da grade externa (6x6 por padrão).
+    inner_size (tuple): Tamanho da grade interna (4x4 por padrão).
+
+    Retorna:
+    str: Uma string binária representando a área interna 4x4 do marcador.
+    """
+    if max(marker_img[0]) > 1:   
         marker_img = marker_img / 255
         
     rows, cols = marker_img.shape
@@ -912,7 +919,7 @@ def extrair_palavra_binaria(marker_img, grid_size=(8, 8) , inner_size=(6, 6) ):
             # Extrai uma célula da grade
             cell = marker_img[i*cell_height:(i+1)*cell_height, j*cell_width:(j+1)*cell_width]
             cell_mean = np.mean(cell)
-            if cell_mean > 0.6:
+            if cell_mean < 0.6:
                 word += "1" 
             else: 
                 word += "0"  
@@ -926,13 +933,29 @@ def extrair_palavra_binaria(marker_img, grid_size=(8, 8) , inner_size=(6, 6) ):
     return word
 
 
+def ordenar_pontos(pontos):
+    # Calcular o centro dos pontos
+    center = np.mean(pontos, axis=0)
+    
+    # Ordenar os pontos com base na posição relativa ao centro
+    sorted_points = sorted(pontos, key=lambda p: (p[0] - center[0]) ** 2 + (p[1] - center[1]) ** 2)
+    
+    # Reordenar para garantir a sequência correta: top-left, top-right, bottom-left, bottom-right
+    # Os 4 pontos ordenados
+    top_left = min(sorted_points, key=lambda p: p[0] + p[1])
+    top_right = max(sorted_points, key=lambda p: p[0] - p[1])
+    bottom_left = min(sorted_points, key=lambda p: p[0] - p[1])
+    bottom_right = max(sorted_points, key=lambda p: p[0] + p[1])
+    
+    return np.array([top_left, top_right, bottom_right, bottom_left], dtype="float32")
 
-img = plt.imread("persp01.png")
+
+img = plt.imread("persp02.png")
 img_gray = np.mean(img, axis=2)
 img_gray = img_gray < 0.5
 img_gray = (img_gray * 255).astype(np.uint8)
 countorns,_ = cv2.findContours(img_gray,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
-dst_points = np.array([[0, 0], [0, 200], [200, 200], [200,0]], dtype="float32") # Trocar Pontos se img tiver invertida 
+dst_points = np.array([[0, 0], [200, 0], [200, 200], [0, 200]], dtype="float32") # Trocar Pontos se img tiver invertida 
 output_size = (200, 200)
 
 fig, ax = plt.subplots()
@@ -953,18 +976,22 @@ for cont in countorns:
         ax.add_artist(circle)
     
     src_points = np.array([p[0] for p in approx], dtype="float32")
+    src_points = ordenar_pontos(src_points)
+    
     matriz_formacao = cv2.getPerspectiveTransform(src_points, dst_points)
     transformed_img_gray = cv2.warpPerspective(img_gray, matriz_formacao, output_size)
     
     plt.figure(figsize=(8, 8))
     plt.imshow(transformed_img_gray, cmap='gray')
     plt.title("Imagem Transformada " + str(i))
-    i = i + 1
 
     word = extrair_palavra_binaria(transformed_img_gray)
-    print(word)
+    print("Imagem Transformada "  + str(i) + " = " + word)
+    
+    i = i + 1
+
 plt.show()
-                   
+
                 </textarea>
             </section>
 
